@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+func printMap(mapr interface{}) {
+	b, err := json.MarshalIndent(mapr, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	println(string(b))
+}
+
 // Use the bitwarden-cli utility to execute commands with the --response and --nointeraction flags
 func bw(args string) (map[string]interface{}, error) {
 	args += " --response --nointeraction"
@@ -28,5 +36,10 @@ func bw(args string) (map[string]interface{}, error) {
 	}
 
 	data := result["data"].(map[string]interface{})
+	// check if the "template" key is present in the data
+	if _, ok := data["template"]; ok {
+		template := data["template"].(map[string]interface{})
+		return template, nil
+	}
 	return data, nil
 }
