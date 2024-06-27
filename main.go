@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/anotherhadi/bitwarden_tui/ui/loading"
 	"github.com/anotherhadi/bitwarden_tui/ui/login"
 	"github.com/anotherhadi/bitwarden_tui/ui/unlock"
 	"github.com/anotherhadi/bitwarden_tui/vault"
@@ -17,8 +19,12 @@ func exitOnError(err error) {
 }
 
 func main() {
+	quit := make(chan struct{})
+	go loading.Loading(quit)
 	v, err := vault.LoadVault()
 	exitOnError(err)
+	quit <- struct{}{}
+	time.Sleep(100000000)
 
 	// var DEBUG bool = false
 	// if DEBUG {

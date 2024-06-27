@@ -1,8 +1,8 @@
 package utils
 
-var icons map[string]string
-icons["github.com"] = "g"
-icons["instagram.com"] = "i"
+// var icons map[string]string
+// icons["github.com"] = "g"
+// icons["instagram.com"] = "i"
 
 func WebsiteIcons(url string) string {
 	var parsedUrl string

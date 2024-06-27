@@ -6,58 +6,60 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-type errMsg error
+type responseMsg struct{}
 
-type model struct {
-	spinner spinner.Model
-	err     error
+// A command that waits for the activity on a channel.
+func waitForActivity(sub chan struct{}) tea.Cmd {
+	return func() tea.Msg {
+		return responseMsg(<-sub)
+	}
 }
 
-func initialModel() model {
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	return model{spinner: s}
+type model struct {
+	sub      chan struct{} // where we'll receive activity notifications
+	spinner  spinner.Model
+	quitting bool
 }
 
 func (m model) Init() tea.Cmd {
-	return m.spinner.Tick
+	return tea.Batch(
+		m.spinner.Tick,
+		waitForActivity(m.sub), // wait for activity
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		default:
-			return m, nil
-		}
-
-	case errMsg:
-		m.err = msg
-		return m, nil
-
-	default:
+	switch msg.(type) {
+	case responseMsg:
+		m.quitting = true
+		return m, tea.Quit
+	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	default:
+		return m, nil
 	}
 }
 
 func (m model) View() string {
-	if m.err != nil {
-		return m.err.Error()
+	s := fmt.Sprintf("\n %s Waiting\n", m.spinner.View())
+	if m.quitting {
+		return "\n"
 	}
-	str := fmt.Sprintf("\n\n   %s Loading\n\n", m.spinner.View())
-	return str
+	return s
 }
 
-func Loading() {
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+func Loading(sub chan struct{}) {
+	p := tea.NewProgram(model{
+		sub:     sub,
+		spinner: spinner.New(),
+	}, tea.WithAltScreen())
+
 	if _, err := p.Run(); err != nil {
-		fmt.Println(err)
+		fmt.Println("could not start program:", err)
 		os.Exit(1)
 	}
 }
